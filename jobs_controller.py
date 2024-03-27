@@ -91,22 +91,14 @@ def scrape_rozee_jobs(query, num_pages, page_size, page):
                           'Chrome/80.0.3987.162 Safari/537.36'}
         response = requests.get(rozeeUrl, headers)
         soup = BeautifulSoup(response.content, 'html.parser')
-        # Find all script tags
         scripts = soup.find_all('script')
-
-        # Iterate over scripts to find the one containing "var apResp"
         for script in scripts:
             if 'var apResp' in script.text:
-                # Use regex to extract the data inside var apResp
                 match = re.search(r'var apResp = ({.*?});', script.text, re.DOTALL)
                 if match:
                     data_inside_apResp = match.group(1)
-                    # Parse the JSON data
-                    apResp_json = json.loads(data_inside_apResp)
-                    # Access the 'jobs' list
+                    apResp_json = json.loads(data_inside_apResp)             
                     jobs_list = apResp_json['response']['jobs']['basic']
-
-                    # Iterate over each job and extract the desired information
                     for job in jobs_list:
                         try:
                             job_data = {}
@@ -138,24 +130,20 @@ def scrape_indeed_jobs(keyword, location, num_pages, page_size, page):
     jobs_data_list = []
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
-
     for current_page in range(1, num_pages + 1):
         if current_page != page:
             continue
-
         indeed_url = get_indeed_search_url(keyword, location, current_page)
-
         response = requests.get(
             url='https://proxy.scrapeops.io/v1/',
             params={
-                'api_key': '68bc17cc-de66-4676-ba3d-1defab82aee3',
+                'api_key': 'YOUR_SCRAPE_OPS_API_HERE', # it is free and they allow 1000 request for free api key
                 'url': indeed_url,
             },
         )
         decoded_content = response.content.decode('utf-8')
         soup = BeautifulSoup(decoded_content, 'html.parser')
         scripts = soup.find_all('script')
-        # Iterate over scripts to find the one with id "mosaic-data"
         for script in scripts:
             if script.get('id') == 'mosaic-data':
                 mosaic_data_script = script
@@ -167,10 +155,7 @@ def scrape_indeed_jobs(keyword, location, num_pages, page_size, page):
                     try:
                         if job.get('jobkey') is not None:
                             job_posted_time = job.get('pubDate')
-                            # Convert milliseconds to seconds
                             posted_time_seconds = int(job_posted_time) // 1000
-
-                            # Convert to datetime object
                             posted_time = datetime.utcfromtimestamp(posted_time_seconds).strftime('%Y-%m-%d')
 
                             maxSalary = job.get('estimatedSalary').get('max') if job.get(
@@ -206,12 +191,10 @@ def scrape_indeed_jobs(keyword, location, num_pages, page_size, page):
 
 def scrape_jobs_for_keyword(keyword, location, num_pages, page_size, page):
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        # Submit the scraping tasks
         rozee_future = executor.submit(scrape_rozee_jobs, keyword, num_pages, 100, 1)
         linkedin_future = executor.submit(scrape_linkedin_jobs, keyword, location, num_pages, 100, 1)
         indeed_future = executor.submit(scrape_indeed_jobs, keyword, location, num_pages, 100, 1)
-
-        # Get the results
+        
         jobs_data_rozee = rozee_future.result()
         jobs_data_linkedin = linkedin_future.result()
         jobs_data_indeed = indeed_future.result()
@@ -220,10 +203,8 @@ def scrape_jobs_for_keyword(keyword, location, num_pages, page_size, page):
                                                                                   []) + jobs_data_indeed.get(
         'jobs_data', [])
 
-    # Calculate total number of jobs
     total_jobs = len(combined_data)
 
-    # Paginate the job listings
     start_index = page_size * (page - 1)
     end_index = start_index + page_size
     paginated_data = combined_data[start_index:end_index]
@@ -232,7 +213,6 @@ def scrape_jobs_for_keyword(keyword, location, num_pages, page_size, page):
     paginated_jobs_linkedin = jobs_data_linkedin.get('jobs_data', [])
     paginated_jobs_indeed = jobs_data_indeed.get('jobs_data', [])
 
-    # Return the paginated results
     return jsonify({
         'linkedIn_jobs': len(paginated_jobs_linkedin),
         'rozee_jobs': len(paginated_jobs_rozee),
