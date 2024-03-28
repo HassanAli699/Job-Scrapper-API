@@ -106,7 +106,7 @@ def scrape_rozee_jobs(query, num_pages, page_size, page):
                             job_data['company_name'] = job.get('company') or "None"
                             job_data['job_location'] = job.get('city') or "None"
                             job_data['job_posted_time'] = job.get('created') or "None"
-                            job_data['job_link'] = f"https://www.rozee.pk/job/{job.get('permaLink')}" or "None"
+                            job_data['job_link'] = f"https://www.rozee.pk/{job.get('permaLink')}" or "None"
                             job_data[
                                 'job_salary'] = f"{job.get('salaryNHide_exact') or 'N/A'} - {job.get('salaryTHide_exact') or 'None'}"
                             job_data['job_skills'] = job.get('skills') or "None"
